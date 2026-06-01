@@ -88,58 +88,61 @@ if uploaded_files and st.button(" Process Papers", type="primary"):
         temp_path = f"temp_{uploaded_file.name}"
 
         try:
-            # Save buffer to temp file
-            with open(temp_path, "wb") as f:
-                f.write(uploaded_file.getbuffer())
+          # Save buffer to temp file
+         with open(temp_path, "wb") as f:
+            f.write(uploaded_file.getbuffer())
 
-            # ── STEP 1: Extract ──────────────────────────────────────────────
-            text = extract_text_from_pdf(temp_path)
-            if not text.strip():
-                st.warning(
-                    f"No text found in **{uploaded_file.name}** "
-                    "(possibly a scanned/image PDF). Skipping."
-                )
-                continue
-            st.success(f"Text extracted ({len(text):,} characters)")
+        # ── STEP 1: Extract ──────────────────────────────────────────────
+        text = extract_text_from_pdf(temp_path)
+        if not text.strip():
+           st.warning(
+              f"No text found in **{uploaded_file.name}** "
+              "(possibly a scanned/image PDF). Skipping."
+        )
+        continue
+    st.success(f"Text extracted ({len(text):,} characters)")
 
-            # ── STEP 2: Chunk ────────────────────────────────────────────────
-            chunks = chunk_text(text)
-            st.write(f"Chunks created: **{len(chunks)}**")
+    # ── STEP 2: Chunk ────────────────────────────────────────────────
+    chunks = chunk_text(text)
+    st.write(f"Chunks created: **{len(chunks)}**")
 
-            # ── STEP 3: Embed ────────────────────────────────────────────────
-            with st.spinner("Creating embeddings…"):
-                embeddings = embedding_model.create_embeddings(chunks)
-            st.success("Embeddings created")
+    # ── STEP 3: Embed ────────────────────────────────────────────────
+    with st.spinner("Creating embeddings…"):
+        embeddings = embedding_model.create_embeddings(chunks)
+    st.success("Embeddings created")
 
-            # ── STEP 4: Store ────────────────────────────────────────────────
-            vector_store.add_embeddings(embeddings, chunks)
-            st.session_state.mean_embeddings.append(np.mean(embeddings, axis=0))
+    # ── STEP 4: Store ────────────────────────────────────────────────
+    vector_store.add_embeddings(embeddings, chunks)
+    st.session_state.mean_embeddings.append(np.mean(embeddings, axis=0))
 
-            # ── STEP 5: Summarise ────────────────────────────────────────────
-            with st.spinner("Generating summary… (may take 30–60s on first run)"):
-                summary = generate_summary(text[:6000])
+    # ── STEP 5: Summarise ────────────────────────────────────────────
+    with st.spinner("Generating summary… (may take 30–60s on first run)"):
+        summary = generate_summary(text[:6000])
 
-            if not summary or not summary.strip():
-                summary = text[:500] + "…"   # safe fallback
+    if not summary or not summary.strip():
+        summary = text[:500] + "…"   # safe fallback
 
-            st.session_state.summaries.append(summary)
-            st.session_state.paper_names.append(uploaded_file.name)
+    st.session_state.summaries.append(summary)
+    st.session_state.paper_names.append(uploaded_file.name)
 
-            with st.expander("Summary", expanded=True):
-                st.write(summary)
+    with st.expander("Summary", expanded=True):
+        st.write(summary)
 
-        except Exception as e:
-            st.error(f"Error processing **{uploaded_file.name}**: {e}")
-            import traceback
-            with st.expander("🔍 Error details"):
-                st.code(traceback.format_exc())
+except Exception as e:
+    st.error(f"Error processing **{uploaded_file.name}**: {e}")
+    import traceback
+    with st.expander("🔍 Error details"):
+        st.code(traceback.format_exc())
 
-        finally:
-            # Always clean up temp file
-            if os.path.exists(temp_path):
-                os.remove(temp_path)
+finally:
+    # ✅ ALWAYS clean up temp file, even if error occurs
+    try:
+        if os.path.exists(temp_path):
+            os.remove(temp_path)
+    except Exception as cleanup_error:
+        st.warning(f"Could not delete temp file {temp_path}: {cleanup_error}")
 
-        progress_bar.progress((i + 1) / total)
+progress_bar.progress((i + 1) / total)
 
     # Persist to session
     st.session_state.vector_store    = vector_store
