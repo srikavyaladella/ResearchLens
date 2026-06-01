@@ -1,0 +1,33 @@
+# PDF parsing
+pypdf
+
+# Text chunking (lightweight - not the full langchain package)
+langchain-text-splitters
+
+# Embeddings (local, free, no API key)
+sentence-transformers
+
+# Vector store
+faiss-cpu
+numpy
+
+# Summarisation and gap analysis (local fallback models)
+transformers
+torch
+accelerate
+
+# HuggingFace Inference API calls
+requests
+
+# Knowledge graph + similarity
+networkx
+scikit-learn
+
+# Streamlit UI
+streamlit
+
+# Environment config
+python-dotenv
+
+# Data utilities
+pandas
