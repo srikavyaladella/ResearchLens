@@ -99,16 +99,25 @@ def generate_summary(text: str) -> str:
     Tries HF Inference API first (if token present), then local model,
     then extractive fallback – so it ALWAYS returns something.
     """
+    if not text or not text.strip():
+        return "No text provided for summarization."
+    
     snippet = _trim(text)
 
     # ── Path 1: HF free API ──────────────────────────────────────────────────
     if HF_API_TOKEN:
         try:
             summary = _summarise_via_hf_api(snippet)
-            if summary:
+            if summary and summary.strip():
                 return summary
         except Exception as e:
             print(f"[ai_core] HF API failed ({e}). Falling back to local model…")
 
     # ── Path 2 + 3: local model or extractive ───────────────────────────────
-    return _summarise_locally(snippet)
+    try:
+        return _summarise_locally(snippet)
+    except Exception as e:
+        print(f"[ai_core] All summarization methods failed: {e}")
+        # Extractive fallback as last resort
+        sentences = [s.strip() for s in text.replace("\n", " ").split(".") if len(s.strip()) > 40]
+        return ". ".join(sentences[:5]) + "." if sentences else text[:500]
