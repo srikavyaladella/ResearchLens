@@ -17,7 +17,7 @@ from gap_analyzer    import analyze_research_gaps
 from retrieval       import retrieve_relevant_chunks
 from knowledge_graph import CitationGraph
 
-# ── Page config ───────────────────────────────────────────────────────────────
+# ── Page config ──────────────────────────────────────────────────────────────
 st.set_page_config(
     page_title="AI Research Gap Finder",
     page_icon="📚",
@@ -39,7 +39,7 @@ with st.sidebar:
     6. Check the **Similarity Graph**
     """)
     st.divider()
-    st.subheader(" Models Used")
+    st.subheader("⚙️ Models Used")
     st.caption("• Embeddings: all-MiniLM-L6-v2 (local, free)")
     st.caption("• Summarisation: facebook/bart-large-cnn")
     st.caption("• Gap analysis: flan-t5-large or Mistral-7B")
@@ -68,7 +68,7 @@ uploaded_files = st.file_uploader(
     accept_multiple_files=True,
 )
 
-if uploaded_files and st.button(" Process Papers", type="primary"):
+if uploaded_files and st.button("📄 Process Papers", type="primary"):
 
     # Reset state
     st.session_state.summaries       = []
@@ -84,65 +84,65 @@ if uploaded_files and st.button(" Process Papers", type="primary"):
     total        = len(uploaded_files)
 
     for i, uploaded_file in enumerate(uploaded_files):
-        st.subheader(f" {uploaded_file.name}")
+        st.subheader(f"📎 {uploaded_file.name}")
         temp_path = f"temp_{uploaded_file.name}"
 
         try:
-          # Save buffer to temp file
-         with open(temp_path, "wb") as f:
-            f.write(uploaded_file.getbuffer())
+            # Save buffer to temp file
+            with open(temp_path, "wb") as f:
+                f.write(uploaded_file.getbuffer())
 
-        # ── STEP 1: Extract ──────────────────────────────────────────────
-        text = extract_text_from_pdf(temp_path)
-        if not text.strip():
-           st.warning(
-              f"No text found in **{uploaded_file.name}** "
-              "(possibly a scanned/image PDF). Skipping."
-        )
-        continue
-    st.success(f"Text extracted ({len(text):,} characters)")
+            # ── STEP 1: Extract ──────────────────────────────────────────────
+            text = extract_text_from_pdf(temp_path)
+            if not text.strip():
+                st.warning(
+                    f"No text found in **{uploaded_file.name}** "
+                    "(possibly a scanned/image PDF). Skipping."
+                )
+                continue
+            st.success(f"Text extracted ({len(text):,} characters)")
 
-    # ── STEP 2: Chunk ────────────────────────────────────────────────
-    chunks = chunk_text(text)
-    st.write(f"Chunks created: **{len(chunks)}**")
+            # ── STEP 2: Chunk ────────────────────────────────────────────────
+            chunks = chunk_text(text)
+            st.write(f"Chunks created: **{len(chunks)}**")
 
-    # ── STEP 3: Embed ────────────────────────────────────────────────
-    with st.spinner("Creating embeddings…"):
-        embeddings = embedding_model.create_embeddings(chunks)
-    st.success("Embeddings created")
+            # ── STEP 3: Embed ────────────────────────────────────────────────
+            with st.spinner("Creating embeddings…"):
+                embeddings = embedding_model.create_embeddings(chunks)
+            st.success("Embeddings created")
 
-    # ── STEP 4: Store ────────────────────────────────────────────────
-    vector_store.add_embeddings(embeddings, chunks)
-    st.session_state.mean_embeddings.append(np.mean(embeddings, axis=0))
+            # ── STEP 4: Store ────────────────────────────────────────────────
+            vector_store.add_embeddings(embeddings, chunks)
+            st.session_state.mean_embeddings.append(np.mean(embeddings, axis=0))
 
-    # ── STEP 5: Summarise ────────────────────────────────────────────
-    with st.spinner("Generating summary… (may take 30–60s on first run)"):
-        summary = generate_summary(text[:6000])
+            # ── STEP 5: Summarise ────────────────────────────────────────────
+            with st.spinner("Generating summary… (may take 30–60s on first run)"):
+                summary = generate_summary(text[:6000])
 
-    if not summary or not summary.strip():
-        summary = text[:500] + "…"   # safe fallback
+            if not summary or not summary.strip():
+                summary = text[:500] + "…"   # safe fallback
 
-    st.session_state.summaries.append(summary)
-    st.session_state.paper_names.append(uploaded_file.name)
+            st.session_state.summaries.append(summary)
+            st.session_state.paper_names.append(uploaded_file.name)
 
-    with st.expander("Summary", expanded=True):
-        st.write(summary)
+            with st.expander("Summary", expanded=True):
+                st.write(summary)
 
-except Exception as e:
-    st.error(f"Error processing **{uploaded_file.name}**: {e}")
-    import traceback
-    with st.expander("🔍 Error details"):
-        st.code(traceback.format_exc())
+        except Exception as e:
+            st.error(f"Error processing **{uploaded_file.name}**: {e}")
+            import traceback
+            with st.expander("🔍 Error details"):
+                st.code(traceback.format_exc())
 
-finally:
-    # ✅ ALWAYS clean up temp file, even if error occurs
-    try:
-        if os.path.exists(temp_path):
-            os.remove(temp_path)
-    except Exception as cleanup_error:
-        st.warning(f"Could not delete temp file {temp_path}: {cleanup_error}")
+        finally:
+            # ✅ ALWAYS clean up temp file, even if error occurs
+            try:
+                if os.path.exists(temp_path):
+                    os.remove(temp_path)
+            except Exception as cleanup_error:
+                st.warning(f"Could not delete temp file {temp_path}: {cleanup_error}")
 
-progress_bar.progress((i + 1) / total)
+        progress_bar.progress((i + 1) / total)
 
     # Persist to session
     st.session_state.vector_store    = vector_store
@@ -152,12 +152,12 @@ progress_bar.progress((i + 1) / total)
     n = len(st.session_state.summaries)
     st.success(f"Processing complete! {n} paper(s) ready.")
 
-# ── Post-processing sections (shown after papers are loaded) ──────────────────
+# ── Post-processing sections (shown after papers are loaded) ────────────────────
 if st.session_state.processed and st.session_state.summaries:
 
     # ── Gap Analysis ──────────────────────────────────────────────────────────
     st.divider()
-    st.header("Research Gap Analysis")
+    st.header("🔍 Research Gap Analysis")
 
     if len(st.session_state.summaries) < 2:
         st.warning("Upload at least **2 papers** to run gap analysis.")
@@ -176,7 +176,7 @@ if st.session_state.processed and st.session_state.summaries:
 
             # Download button
             st.download_button(
-                label=" Download Gap Report",
+                label="📥 Download Gap Report",
                 data=st.session_state.gap_report,
                 file_name="gap_report.md",
                 mime="text/markdown",
@@ -184,7 +184,7 @@ if st.session_state.processed and st.session_state.summaries:
 
     # ── Q&A Section ───────────────────────────────────────────────────────────
     st.divider()
-    st.header(" Ask Questions About Your Papers")
+    st.header("❓ Ask Questions About Your Papers")
     st.caption("Searches the full text of all uploaded papers using semantic similarity.")
 
     query = st.text_input("Ask anything about the uploaded papers…", key="qa_input")
@@ -202,16 +202,16 @@ if st.session_state.processed and st.session_state.summaries:
                 results = []
 
         if results:
-            st.subheader(" Most Relevant Excerpts")
+            st.subheader("📖 Most Relevant Excerpts")
             for j, chunk in enumerate(results, 1):
                 with st.expander(f"Excerpt {j}", expanded=(j == 1)):
                     st.write(chunk)
         else:
             st.warning("No relevant chunks found. Try rephrasing your question.")
 
-    # ── Knowledge Graph ───────────────────────────────────────────────────────
+    # ── Knowledge Graph ────────────────────────────────────────────────────────
     st.divider()
-    st.header(" Paper Similarity Graph")
+    st.header("📊 Paper Similarity Graph")
     st.caption("Papers are linked when their content similarity (cosine) ≥ 0.70.")
 
     names    = st.session_state.paper_names
@@ -240,7 +240,7 @@ if st.session_state.processed and st.session_state.summaries:
                         )
                     top = citation_graph.most_connected_paper()
                     if top:
-                        st.success(f" Most connected paper: **{top}**")
+                        st.success(f"🏆 Most connected paper: **{top}**")
                 else:
                     st.info(
                         "No strong connections found (threshold 0.70). "
