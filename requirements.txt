@@ -23,6 +23,8 @@ requests
 networkx
 scikit-learn
 
+python-dotenv
+
 # Streamlit UI
 streamlit
 
