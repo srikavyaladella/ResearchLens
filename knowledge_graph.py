@@ -11,8 +11,10 @@ from sklearn.metrics.pairwise import cosine_similarity
 
 
 class CitationGraph:
+    """Graph representation of paper relationships based on semantic similarity."""
 
     def __init__(self):
+        """Initialize an empty undirected graph."""
         self.graph = nx.Graph()
 
     # ── basic operations ──────────────────────────────────────────────────────
@@ -45,12 +47,23 @@ class CitationGraph:
         paper_names      : list of paper display names (same order as embeddings)
         paper_embeddings : list of 1-D numpy arrays (one mean embedding per paper)
         threshold        : min cosine similarity to draw an edge (0.0 – 1.0)
+        
+        Raises
+        ------
+        ValueError
+            If paper_names and paper_embeddings have different lengths
         """
         if len(paper_names) != len(paper_embeddings):
             raise ValueError(
                 f"paper_names ({len(paper_names)}) and "
                 f"paper_embeddings ({len(paper_embeddings)}) must have same length."
             )
+
+        # Convert embeddings to numpy arrays for consistency
+        paper_embeddings = [
+            np.array(e) if not isinstance(e, np.ndarray) else e 
+            for e in paper_embeddings
+        ]
 
         for name in paper_names:
             self.add_paper(name)
@@ -65,7 +78,7 @@ class CitationGraph:
                 if score >= threshold:
                     self.add_relationship(paper_names[i], paper_names[j], weight=score)
 
-    # ── analytics ─────────────────────────────────────────────────────────────
+    # ── analytics ─────────────────────────────────────────────────────────
 
     def get_paper_stats(self) -> dict:
         """Return degree-centrality score for each paper (higher = more connected)."""
@@ -80,7 +93,7 @@ class CitationGraph:
             return None
         return max(stats, key=stats.get)
 
-    # ── serialisation ─────────────────────────────────────────────────────────
+    # ── serialisation ────────────────────────────────────────────────────────
 
     def to_dict(self) -> dict:
         """Return a JSON-friendly dict with nodes and weighted edges."""
