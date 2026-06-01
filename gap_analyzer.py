@@ -3,23 +3,23 @@ gap_analyzer.py  –  Real AI-powered research gap analysis
 ----------------------------------------------------------
 Strategy (free, no paid API needed):
 
-  Priority 1 → HuggingFace FREE Inference API (Mistral-7B-Instruct)
-               Requires HF_API_TOKEN in .env
+   Priority 1 → HuggingFace FREE Inference API (Mistral-7B-Instruct)
+                Requires HF_API_TOKEN in .env
 
-  Priority 2 → Local flan-t5-large via "text2text-generation" task
-               (NOT "summarization" – removed in transformers 5.x)
+   Priority 2 → Local flan-t5-large via "text2text-generation" task
+                (NOT "summarization" – removed in transformers 5.x)
 
-  Priority 3 → Rule-based structured analysis as final safety net
-               (always returns a useful report even if AI fails)
+   Priority 3 → Rule-based structured analysis as final safety net
+                (always returns a useful report even if AI fails)
 """
 
 import requests
 from config import HF_API_TOKEN, HF_GAP_MODEL
 
 
-# ─────────────────────────────────────────────────────────────────────────────
+# ────────────────────────────────────────────────────────────────
 # Prompt builder
-# ─────────────────────────────────────────────────────────────────────────────
+# ────────────────────────────────────────────────────────────────
 
 def _build_prompt(summaries: list) -> str:
     numbered = "\n\n".join(
@@ -37,11 +37,31 @@ def _build_prompt(summaries: list) -> str:
     )
 
 
-# ─────────────────────────────────────────────────────────────────────────────
+# ────────────────────────────────────────────────────────────────
 # HF Inference API path
-# ─────────────────────────────────────────────────────────────────────────────
+# ────────────────────────────────────────────────────────────────
 
 def _gap_via_hf_api(prompt: str) -> str:
+    """
+    Call HuggingFace Inference API for gap analysis.
+    
+    Parameters
+    ----------
+    prompt : str
+        Formatted prompt for the model
+        
+    Returns
+    -------
+    str
+        Generated gap analysis text
+        
+    Raises
+    ------
+    RuntimeError
+        If API returns an error
+    ValueError
+        If response format is unexpected
+    """
     url     = f"https://api-inference.huggingface.co/models/{HF_GAP_MODEL}"
     headers = {"Authorization": f"Bearer {HF_API_TOKEN}"}
     payload = {
@@ -57,17 +77,21 @@ def _gap_via_hf_api(prompt: str) -> str:
     data = resp.json()
 
     if isinstance(data, list) and data:
-        text = data[0].get("generated_text", "").strip()
+        item = data[0]
+        # Try multiple possible response keys for compatibility
+        text = item.get("generated_text") or item.get("text") or str(item).strip()
         if text:
             return text
+    
     if isinstance(data, dict) and "error" in data:
         raise RuntimeError(f"HF API: {data['error']}")
+    
     raise ValueError(f"Unexpected HF API response: {data}")
 
 
-# ─────────────────────────────────────────────────────────────────────────────
+# ────────────────────────────────────────────────────────────────
 # Local model path  (flan-t5-large)
-# ─────────────────────────────────────────────────────────────────────────────
+# ────────────────────────────────────────────────────────────────
 
 def _gap_locally(summaries: list) -> str:
     """
@@ -95,9 +119,9 @@ def _gap_locally(summaries: list) -> str:
         return _rule_based_analysis(summaries)
 
 
-# ─────────────────────────────────────────────────────────────────────────────
+# ────────────────────────────────────────────────────────────────
 # Rule-based fallback (always works, no dependencies)
-# ─────────────────────────────────────────────────────────────────────────────
+# ────────────────────────────────────────────────────────────────
 
 def _rule_based_analysis(summaries: list) -> str:
     """
@@ -149,9 +173,9 @@ def _rule_based_analysis(summaries: list) -> str:
     )
 
 
-# ─────────────────────────────────────────────────────────────────────────────
+# ────────────────────────────────────────────────────────────────
 # Public API
-# ─────────────────────────────────────────────────────────────────────────────
+# ────────────────────────────────────────────────────────────────
 
 def analyze_research_gaps(summaries: list) -> str:
     """
